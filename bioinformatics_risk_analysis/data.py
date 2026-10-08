@@ -22,7 +22,17 @@ disease = rng.normal(
 
 # Calculate 10 genes with higher expression of disease
 
-disease[:10]+=2.0
+# disease[:10]+=2.0
+disease_genes = rng.choice(
+    n_genes,
+    size=10,
+    replace=False
+)
+
+print("Selected disease-associated genes:", disease_genes)
+
+# Apply random expression increase to those genes
+disease[disease_genes] += 2.0
 
 expression = np.concatenate(
     [healthy, disease],
