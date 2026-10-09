@@ -4,6 +4,7 @@ from pathlib import Path
 import GEOparse
 import numpy as np
 import pandas as pd
+from scipy.stats import ttest_rel
 
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
@@ -67,10 +68,13 @@ def classify_sample(title):
     return donor, condition
 
 
+# Build metadata from sample_records, not expression_columns
 records = []
 
-for title in expression_columns:
+for sample in sample_records:
+    title = sample["title"]
     donor, condition = classify_sample(title)
+
     records.append({
         "sample": title,
         "donor": donor,
@@ -79,46 +83,56 @@ for title in expression_columns:
 
 meta = pd.DataFrame(records).set_index("sample")
 
-# Ensure each donor has both conditions
+print("\nSample metadata:")
+print(meta)
+
+# Match control and treated samples from the same donor
 control_samples = []
 treated_samples = []
 
 for donor in sorted(meta["donor"].unique()):
     donor_meta = meta[meta["donor"] == donor]
 
-    control = donor_meta[
+    controls = donor_meta[
         donor_meta["condition"] == "control"
-    ].index
+    ].index.tolist()
 
-    treated = donor_meta[
+    treated_samples_for_donor = donor_meta[
         donor_meta["condition"] == "treated"
-    ].index
+    ].index.tolist()
 
-    if len(control) != 1 or len(treated) != 1:
-        raise ValueError(f"Unexpected sample pairing for donor {donor}")
+    if len(controls) != 1 or len(treated_samples_for_donor) != 1:
+        raise ValueError(
+            f"Unexpected sample pairing for donor {donor}"
+        )
 
-    control_samples.append(control[0])
-    treated_samples.append(treated[0])
+    control_samples.append(controls[0])
+    treated_samples.append(treated_samples_for_donor[0])
 
-control = expression[control_samples].to_numpy(dtype=float)
-treated = expression[treated_samples].to_numpy(dtype=float)
+# Extract numerical arrays
+control_expr = expression[control_samples].to_numpy(dtype=float)
+treated_expr = expression[treated_samples].to_numpy(dtype=float)
 
-difference = treated - control
+print("\nControl shape:", control_expr.shape)
+print("Treated shape:", treated_expr.shape)
+
+# Calculate paired differences: treated minus control
+difference = treated_expr - control_expr
 
 mean_difference = difference.mean(axis=1)
 
-# Paired t-test across the five donors
+# Paired t-test across donors
 test = ttest_rel(
-    treated,
-    control,
+    treated_expr,
+    control_expr,
     axis=1,
     nan_policy="omit",
 )
 
 results = pd.DataFrame({
     "probe_id": expression.index,
-    "control_mean": control.mean(axis=1),
-    "treated_mean": treated.mean(axis=1),
+    "control_mean": control_expr.mean(axis=1),
+    "treated_mean": treated_expr.mean(axis=1),
     "mean_difference": mean_difference,
     "p_value": test.pvalue,
 })
