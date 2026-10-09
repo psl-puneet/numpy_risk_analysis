@@ -5,6 +5,7 @@ import GEOparse
 import numpy as np
 import pandas as pd
 from scipy.stats import ttest_rel
+from statsmodels.stats.multitest import multipletests
 
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
@@ -148,9 +149,30 @@ results = results.sort_values(
 
 Path("results").mkdir(exist_ok=True)
 
+valid = results["p_value"].notna()
+
+results["adjusted_p_value"] = np.nan
+
+results.loc[valid, "adjusted_p_value"] = multipletests(
+    results.loc[valid, "p_value"],
+    method="fdr_bh",
+)[1]
+
+results = results.sort_values("adjusted_p_value")
+
 results.to_csv(
     "results/probe_differences.csv",
     index=False,
 )
 
-print(results.head(20).to_string(index=False))
+print(
+    results[
+        [
+            "probe_id",
+            "mean_difference",
+            "p_value",
+            "adjusted_p_value",
+        ]
+    ].head(20).to_string(index=False)
+)
+
