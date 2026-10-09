@@ -2,177 +2,73 @@ import re
 from pathlib import Path
 
 import GEOparse
-import numpy as np
 import pandas as pd
-from scipy.stats import ttest_rel
-from statsmodels.stats.multitest import multipletests
 
-DATA_DIR = Path("data")
-DATA_DIR.mkdir(exist_ok=True)
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = PROJECT_DIR / "data"
+RESULTS_DIR = PROJECT_DIR / "results"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Download and parse the GEO series
-gse = GEOparse.get_GEO(
-    "GSE68849",
-    destdir=str(DATA_DIR),
-)
 
-print("Number of samples:", len(gse.gsms))
-
-expression_columns = []
-sample_records = []
-
-for gsm_id, gsm in gse.gsms.items():
-    title = gsm.metadata["title"][0]
-    table = gsm.table[["ID_REF", "VALUE"]].copy()
-
-    print(gsm_id, repr(title))
-
-    table = table.drop_duplicates("ID_REF")
-    table = table.set_index("ID_REF")
-    table = table.rename(columns={"VALUE": title})
-
-    expression_columns.append(table)
-
-    sample_records.append({
-        "sample_id": gsm_id,
-        "title": title,
-    })
-
-expression = pd.concat(
-    expression_columns,
-    axis=1,
-    join="inner",
-)
-
-metadata = pd.DataFrame(sample_records)
-
-print("Expression matrix:", expression.shape)
-print(metadata.to_string(index=False))
-print(expression.iloc[:5, :5])
-
-def classify_sample(title):
-    title = str(title).lower()
-
-    match = re.search(r"donor\s+(\d+)", title)
+def classify_sample(title: str):
+    title_lower = str(title).lower()
+    match = re.search(r"donor\s+(\d+)", title_lower)
     if not match:
-        raise ValueError(f"Cannot identify donor: {title}")
+        raise ValueError(f"Cannot identify donor from sample title: {title}")
 
-    donor = int(match.group(1))
-
-    if "no virus control" in title:
+    if "no virus control" in title_lower:
         condition = "control"
-    elif "influenza treated" in title:
+    elif "influenza treated" in title_lower:
         condition = "treated"
     else:
-        raise ValueError(f"Unknown condition: {title}")
+        raise ValueError(f"Unknown condition in sample title: {title}")
 
-    return donor, condition
+    return int(match.group(1)), condition
 
 
-# Build metadata from sample_records, not expression_columns
-records = []
+def main():
+    geo_file = DATA_DIR / "GSE68849_family.soft.gz"
+    if geo_file.exists():
+        gse = GEOparse.get_GEO(filepath=str(geo_file))
+    else:
+        gse = GEOparse.get_GEO("GSE68849", destdir=str(DATA_DIR))
 
-for sample in sample_records:
-    title = sample["title"]
-    donor, condition = classify_sample(title)
+    expression_columns = []
+    records = []
 
-    records.append({
-        "sample": title,
-        "donor": donor,
-        "condition": condition,
-    })
+    for gsm_id, gsm in gse.gsms.items():
+        title = gsm.metadata["title"][0]
+        table = gsm.table[["ID_REF", "VALUE"]].copy()
+        table = table.drop_duplicates("ID_REF").set_index("ID_REF")
+        table["VALUE"] = pd.to_numeric(table["VALUE"], errors="coerce")
+        table = table.rename(columns={"VALUE": title})
+        expression_columns.append(table)
 
-meta = pd.DataFrame(records).set_index("sample")
+        donor, condition = classify_sample(title)
+        records.append({
+            "sample_id": gsm_id,
+            "sample": title,
+            "donor": donor,
+            "condition": condition,
+        })
 
-print("\nSample metadata:")
-print(meta)
+    expression = pd.concat(expression_columns, axis=1, join="inner")
+    expression.index.name = "probe_id"
+    metadata = pd.DataFrame(records)
 
-# Match control and treated samples from the same donor
-control_samples = []
-treated_samples = []
+    # Ensure there is exactly one control and one treated sample per donor.
+    counts = metadata.groupby(["donor", "condition"]).size()
+    if not (counts == 1).all():
+        raise ValueError(f"Unexpected donor/condition pairing:\n{counts}")
 
-for donor in sorted(meta["donor"].unique()):
-    donor_meta = meta[meta["donor"] == donor]
+    expression.to_csv(RESULTS_DIR / "expression_matrix.csv")
+    metadata.to_csv(RESULTS_DIR / "sample_metadata.csv", index=False)
 
-    controls = donor_meta[
-        donor_meta["condition"] == "control"
-    ].index.tolist()
+    print(f"Samples: {len(metadata)}")
+    print(f"Expression matrix (probes x samples): {expression.shape}")
+    print(f"Saved files in: {RESULTS_DIR}")
 
-    treated_samples_for_donor = donor_meta[
-        donor_meta["condition"] == "treated"
-    ].index.tolist()
 
-    if len(controls) != 1 or len(treated_samples_for_donor) != 1:
-        raise ValueError(
-            f"Unexpected sample pairing for donor {donor}"
-        )
-
-    control_samples.append(controls[0])
-    treated_samples.append(treated_samples_for_donor[0])
-
-# Extract numerical arrays
-control_expr = expression[control_samples].to_numpy(dtype=float)
-treated_expr = expression[treated_samples].to_numpy(dtype=float)
-
-print("\nControl shape:", control_expr.shape)
-print("Treated shape:", treated_expr.shape)
-
-# Calculate paired differences: treated minus control
-difference = treated_expr - control_expr
-
-mean_difference = difference.mean(axis=1)
-
-# Paired t-test across donors
-test = ttest_rel(
-    treated_expr,
-    control_expr,
-    axis=1,
-    nan_policy="omit",
-)
-
-results = pd.DataFrame({
-    "probe_id": expression.index,
-    "control_mean": control_expr.mean(axis=1),
-    "treated_mean": treated_expr.mean(axis=1),
-    "mean_difference": mean_difference,
-    "p_value": test.pvalue,
-})
-
-results["absolute_difference"] = (
-    results["mean_difference"].abs()
-)
-
-results = results.sort_values(
-    "absolute_difference",
-    ascending=False,
-)
-
-Path("results").mkdir(exist_ok=True)
-
-valid = results["p_value"].notna()
-
-results["adjusted_p_value"] = np.nan
-
-results.loc[valid, "adjusted_p_value"] = multipletests(
-    results.loc[valid, "p_value"],
-    method="fdr_bh",
-)[1]
-
-results = results.sort_values("adjusted_p_value")
-
-results.to_csv(
-    "results/probe_differences.csv",
-    index=False,
-)
-
-print(
-    results[
-        [
-            "probe_id",
-            "mean_difference",
-            "p_value",
-            "adjusted_p_value",
-        ]
-    ].head(20).to_string(index=False)
-)
-
+if __name__ == "__main__":
+    main()
