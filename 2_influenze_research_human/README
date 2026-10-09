@@ -1,0 +1,7 @@
+python -m pip install -r requirements.txt
+
+python src/analyze.py
+python src/explore.py
+python src/differential_expression.py
+python src/annotate_probes.py
+python src/investigate_genes.py
