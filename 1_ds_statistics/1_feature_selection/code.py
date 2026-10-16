@@ -26,3 +26,8 @@ with open(file_path, "wb") as f:
 df = pd.read_csv(file_path)
 print(df.head())
 # %%
+X = df.drop('TARGET', axis=1)
+y = df["TARGET"]
+
+X.shape, y.shape
+# %%
