@@ -25,9 +25,29 @@ with open(file_path, "wb") as f:
 # %%
 df = pd.read_csv(file_path)
 print(df.head())
+
 # %%
 X = df.drop('TARGET', axis=1)
 y = df["TARGET"]
 
 X.shape, y.shape
+
+# %%
+### Applying feature selection
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+# %%
+constant_filter = VarianceThreshold(threshold=0)
+constant_filter.fit(X_train)
+
+# %%
+constant_filter.get_support().sum()
+
+
+# %%
+constant_list = [not temp for temp in constant_filter.get_support()]
+constant_list
+
+# %% 
+X.columns[constant_list]
 # %%
