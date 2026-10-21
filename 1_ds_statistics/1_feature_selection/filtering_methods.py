@@ -117,10 +117,10 @@ def run_random_forest(X_train, X_test, y_train, y_test):
     print("Accuracy Score: ",accuracy_score(y_test, y_pred))
 
 #%%
-%%time # type:ignore
+%%time 
 run_random_forest(X_train_unique, X_test_unique, y_train, y_test)
 
 # %%
-%%time # type:ignore
+%%time 
 run_random_forest(X_train, X_test, y_train, y_test)
 
