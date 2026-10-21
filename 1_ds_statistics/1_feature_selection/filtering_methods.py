@@ -109,3 +109,18 @@ X_train_unique.shape, X_test_unique.shape, X_train.shape
 
 ### Build ML Model and compare the performace of the selected features
 # %%
+def run_random_forest(X_train, X_test, y_train, y_test):
+    clf = RandomForestClassifier(n_estimators=100, random_state=0, n_jobs=-1)
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test) 
+    print("Accuracy on test set: ")
+    print("Accuracy Score: ",accuracy_score(y_test, y_pred))
+
+#%%
+%%time # type:ignore
+run_random_forest(X_train_unique, X_test_unique, y_train, y_test)
+
+# %%
+%%time # type:ignore
+run_random_forest(X_train, X_test, y_train, y_test)
+
