@@ -72,5 +72,40 @@ X_test_quassi_filter = quasi_constant_filter.transform(X_test_filter)
 # %%
 X_train_quassi_filter.shape , X_test_quassi_filter.shape, X_train_filter.shape
 
-### Duplicate Features remocal
+### Duplicate Features Removal
+# %%
+X_train_T = X_train_quassi_filter.T
+X_test_T = X_test_quassi_filter.T
+
+type(X_train_T)
+
+# %%
+X_train_T = pd.DataFrame(X_train_T)
+X_test_T = pd.DataFrame(X_test_T)
+
+# %%
+X_train_T.shape, X_test_T.shape
+
+# %%
+X_train_T.duplicated().sum()
+
+# %%
+X_test_T.duplicated().sum()
+
+# %%
+duplicated_features = X_train_T.duplicated()
+duplicated_features
+
+# %%
+features_to_keep = [not index for index in duplicated_features]
+features_to_keep
+
+# %%
+X_train_unique = X_train_T[features_to_keep].T
+X_test_unique = X_test_T[features_to_keep].T
+
+# %%
+X_train_unique.shape, X_test_unique.shape, X_train.shape
+
+### Build ML Model and compare the performace of the selected features
 # %%
