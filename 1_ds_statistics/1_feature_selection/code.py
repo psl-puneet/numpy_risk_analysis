@@ -51,3 +51,26 @@ constant_list
 # %% 
 X.columns[constant_list]
 # %%
+X_train_filter = constant_filter.transform(X_train)
+X_test_filter = constant_filter.transform(X_test)
+
+# %%
+X_train_filter.shape, X_test_filter.shape, X_train.shape
+
+### Quassi Constant feature removal
+# %%
+quasi_constant_filter = VarianceThreshold(threshold=0.01)
+quasi_constant_filter.fit(X_train_filter)
+
+# %%
+quasi_constant_filter.get_support().sum()
+
+# %%
+X_train_quassi_filter = quasi_constant_filter.transform(X_train_filter)
+X_test_quassi_filter = quasi_constant_filter.transform(X_test_filter)
+
+# %%
+X_train_quassi_filter.shape , X_test_quassi_filter.shape, X_train_filter.shape
+
+### Duplicate Features remocal
+# %%
