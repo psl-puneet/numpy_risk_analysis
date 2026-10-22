@@ -24,7 +24,7 @@ def get_correlation(data, threshold):
     # data = training data
     corr_col = set()
     corrmat = data.corr()
-    for i in range(len(corrmat.colmns)):
+    for i in range(len(corrmat.columns)):
         for j in range(i):
             if abs(corrmat.iloc[i,j]) > threshold:
                 colname = corrmat.columns[i]
