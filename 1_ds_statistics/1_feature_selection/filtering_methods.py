@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import requests
 import os
+import joblib
 
 # %% 
 from sklearn.model_selection import train_test_split
@@ -118,9 +119,21 @@ def run_random_forest(X_train, X_test, y_train, y_test):
 
 #%%
 %%time 
-run_random_forest(X_train_unique, X_test_unique, y_train, y_test)
+model = run_random_forest(X_train_unique, X_test_unique, y_train, y_test)
 
 # %%
 %%time 
 run_random_forest(X_train, X_test, y_train, y_test)
 
+# %% 
+joblib.dump({
+    "model": model,
+    "X_train_unique": X_train_unique,
+    "constant_filter": constant_filter,
+    "quasi_constant_filter": quasi_constant_filter,
+    "features_to_keep": features_to_keep,
+    "feature_names": X.columns.to_list(),
+}, filename="feature_selection_model.joblib")
+
+print("Model and features are saved successfully")
+# %%
