@@ -118,21 +118,19 @@ def run_random_forest(X_train, X_test, y_train, y_test):
     print("Accuracy Score: ",accuracy_score(y_test, y_pred))
 
 #%%
-%%time 
 model = run_random_forest(X_train_unique, X_test_unique, y_train, y_test)
 
 # %%
-%%time 
 run_random_forest(X_train, X_test, y_train, y_test)
 
 # %% 
 joblib.dump({
-    "model": model,
     "X_train_unique": X_train_unique,
-    "constant_filter": constant_filter,
-    "quasi_constant_filter": quasi_constant_filter,
-    "features_to_keep": features_to_keep,
-    "feature_names": X.columns.to_list(),
+    "X_test_unique": X_test_unique,
+    "y_test": y_test,
+    "y_train": y_train,
+    "X_train": X_train,
+    "X_test": X_test
 }, filename="feature_selection_model.joblib")
 
 print("Model and features are saved successfully")
