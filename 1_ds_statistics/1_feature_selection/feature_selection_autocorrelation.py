@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from filtering_methods import run_random_forest
+from sklearn.ensemble import RandomForestClassifier
 
 # %%
 artifacts = joblib.load("feature_selection_model.joblib")
@@ -100,7 +101,56 @@ len(correlated_groups_list)
 
 # %%
 # Feature importance based on tree based classifiers
-important_features = []
 for group in correlated_groups_list:
     print(group)
+
+# %%
+important_features = []
+for group in correlated_groups_list:
+    features = list(group.Features1.unique()) + list(group.Features2.unique())
+    rf = RandomForestClassifier(n_estimators=100, random_state=0)
+    rf.fit(X_train_unique[features], y_train)
+
+    importance = pd.concat([pd.Series(features), pd.Series(rf.feature_importances_)], axis=1)
+    importance.columns = ['features', 'importance']
+    importance.sort_values(by='importance', ascending=False, inplace=True)
+    feat = importance.iloc[0]
+    important_features.append(feat)
+
+# %%
+important_features
+
+# %%
+important_features = pd.DataFrame(important_features)
+important_features.reset_index(inplace=True, drop=True)
+important_features
+
+
+# %%
+features_to_consider = set(important_features["features"])
+features_to_discard = set(corr_features) - set(features_to_consider)
+features_to_discard = list(features_to_discard)
+
+# %%
+features_to_discard
+
+# %%
+X_train_grouped_uncorr = X_train_unique.drop(labels=features_to_discard, axis=1)
+X_train_grouped_uncorr.shape
+
+# %%
+X_test_grouped_uncorr = X_test_unique.drop(labels=features_to_discard, axis=1)
+X_test_grouped_uncorr.shape
+
+# %%
+%%time
+run_random_forest(X_train_grouped_uncorr, X_test_grouped_uncorr, y_train, y_test)
+
+# %%
+%%time
+run_random_forest(X_train, X_test, y_train, y_test)
+
+# %%
+%%time
+run_random_forest(X_train_uncorr, X_test_uncorr, y_train, y_test)
 # %%
