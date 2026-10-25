@@ -116,3 +116,73 @@ run_random_forest(X_train, X_test, y_train, y_test)
 (811-666)*100/811
 
 # %%
+# Mutual information gain in regression
+from sklearn.datasets import fetch_california_housing
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+boston = fetch_california_housing(as_frame=True)
+print(boston.DESCR)
+
+# %%
+X=pd.DataFrame(data=boston.data, columns=boston.feature_names)
+
+# %%
+X.head()
+
+# %%
+y=boston.target
+y.head()
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2, random_state=0)
+mi = mutual_info_regression(X_train, y_train)
+mi = pd.Series(mi)
+mi.index = X_train.columns
+mi.sort_values(ascending=False, inplace=True)
+
+# %%
+mi
+
+# %%
+mi.plot.bar()
+
+# %%
+sel = SelectKBest(mutual_info_regression, k=4).fit(X_train, y_train)
+
+# %%
+X_train.columns[sel.get_support()]
+
+# %%
+model = LinearRegression()
+model.fit(X_train, y_train)
+y_predict = model.predict(X_test)
+
+# %%
+r2_score(y_test, y_predict)
+
+# %%
+rmse = np.sqrt(mean_squared_error(y_test, y_predict))
+rmse
+
+# %%
+np.std(y)
+
+# %%
+X_train_4 = sel.transform(X_train)
+X_train_4.shape
+
+# %% 
+X_test_4 = sel.transform(X_test)
+X_test_4.shape
+
+# %%
+model = LinearRegression()
+model.fit(X_train_4, y_train)
+y_predict = model.predict(X_test_4)
+r2_score_val = r2_score(y_test, y_predict)
+print("r2 Score ", r2_score_val)
+rmse = np.sqrt(mean_squared_error(y_test, y_predict))
+print("rmse ", rmse)
+
+# %%
