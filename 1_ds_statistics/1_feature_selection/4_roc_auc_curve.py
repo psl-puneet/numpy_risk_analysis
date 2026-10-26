@@ -7,3 +7,12 @@ def get_boston_dataset():
     data = np.hstack([raw_df.values[::2, :], raw_df.values[1::2, :2]])
     target = raw_df.values[1::2, 2]
     return data, target
+
+# %%
+df, target = get_boston_dataset()
+df.head()
+
+# %%
+target.head()
+
+# %%
