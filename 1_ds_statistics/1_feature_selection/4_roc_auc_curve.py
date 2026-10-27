@@ -60,3 +60,53 @@ X.shape, y.shape
 
 # %%
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
+
+# %% 
+constant_filter = VarianceThreshold(threshold=0.01)
+constant_filter.fit(X_train)
+X_train_filter = constant_filter.transform(X_train)
+X_test_filter = constant_filter.transform(X_test)
+
+# %%
+X_train.shape, X_test.shape
+
+# %%
+X_train_T = X_train_filter.T
+X_test_T = X_test_filter.T
+
+X_train_T = pd.DataFrame(X_train_T)
+X_test_T = pd.DataFrame(X_test_T)
+
+# %%
+X_train_T.duplicated().sum()
+duplicated_features = X_train_T.duplicated()
+
+# %% 
+features_to_keep = [not index for index in duplicated_features]
+X_train_unique = X_train_T[features_to_keep].T
+X_test_unique = X_test_T[features_to_keep].T
+
+# %%
+X_train_unique.shape, X_test_unique.shape
+
+# %%
+def run_random_forest(X_train, X_test, y_train, y_test):
+    clf = RandomForestClassifier(n_estimators=100, random_state=0, n_jobs=-1)
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test) 
+    print("Accuracy on test set: ")
+    print("Accuracy Score: ",accuracy_score(y_test, y_pred))
+
+# %%
+%%time
+run_random_forest(X_train_unique, X_test_unique, y_train, y_test)
+
+# %%
+%%time
+run_random_forest(X_train_filter, X_test_filter, y_train, y_test)
+
+# %%
+%%time
+run_random_forest(X_train, X_test, y_train, y_test)
+
+# %%
