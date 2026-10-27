@@ -1,6 +1,14 @@
 # %%
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, roc_auc_score
+from sklearn.feature_selection import VarianceThreshold
+
 
 def get_boston_dataset():   
     data_url = "http://lib.stat.cmu.edu/datasets/boston"
@@ -37,3 +45,18 @@ target.head()
 
 # %%
 # MSE for Regression, ROC_AUC for classification
+# %%
+file_path="../data/santander-train.csv"
+
+# %%
+df = pd.read_csv(file_path)
+print(df.head())
+
+# %%
+X = df.drop('TARGET', axis=1)
+y = df['TARGET']
+
+X.shape, y.shape
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0, stratify=y)
