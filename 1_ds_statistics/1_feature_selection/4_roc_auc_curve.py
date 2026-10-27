@@ -110,3 +110,45 @@ run_random_forest(X_train_filter, X_test_filter, y_train, y_test)
 run_random_forest(X_train, X_test, y_train, y_test)
 
 # %%
+## Calculate ROC AUC
+roc_auc = []
+for feature in X_train_unique.columns:
+    clf = RandomForestClassifier(n_estimators=100, random_state=0)
+    clf.fit(X_train_unique[feature].to_frame(), y_train)
+    y_pred = clf.predict(X_test_unique[feature].to_frame())
+    roc_auc.append(roc_auc_score(y_test, y_pred))
+
+# %%
+print("ROC_AUC: ", roc_auc)
+
+# %%
+roc_values = pd.Series(roc_auc)
+roc_values.index = X_train_unique.columns
+roc_values.sort_values(ascending=False, inplace=True)
+roc_values
+
+# %%
+roc_values.plot.bar()
+
+#%%
+sel = roc_values[roc_values>0.5]
+sel.plot.bar()
+
+
+# %%
+roc_values.shape, sel.shape
+
+# %% 
+X_train_roc = X_train_unique[sel.index]
+X_test_roc = X_test_unique[sel.index]
+
+# %%
+%%time
+run_random_forest(X_train_roc, X_test_roc, y_train, y_test)
+
+# %%
+X_train_roc.shape
+
+# %%
+sel.plot.line()
+
